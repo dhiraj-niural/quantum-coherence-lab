@@ -1,4 +1,4 @@
-"""Circuit transcribed from browser-visible homework; not an original export."""
+"""Ordered four-qubit gate sequence; source provenance is preserved separately."""
 from dataclasses import dataclass
 
 @dataclass(frozen=True)

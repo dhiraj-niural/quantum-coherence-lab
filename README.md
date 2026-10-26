@@ -1,21 +1,23 @@
-# Four-qubit homework reconstruction
+# Quantum Coherence Lab
 
-A local, standard-library-only reconstruction of Dhiraj's four-qubit homework circuit. The original exported source was inspected and the transcribed gate sequence matches it. This is **not a successful execution of the original Julia/Yao environment**. This implementation uses Python. No paid APIs, network requests or external dependencies.
+**What evidence distinguishes quantum coherence from a matching measurement histogram?**
 
+A Python environment for inspecting quantum state evolution and checking measurement claims. The current baseline tracks a four-qubit GHZ-minus state, verifies every gate against an independent dense-matrix implementation, and separates exact probabilities from sampled counts.
+
+## Run
 ```sh
 python3 -m unittest discover -s tests -v
-python3 -m quantum_homework
+python3 -m quantum_coherence
 ```
+Open `results/index.html` for the interactive viewer. Python standard library only.
 
-- `quantum_homework/circuit.py`: ordered source gates and labels.
-- `simulator.py`: pairwise state-vector operations and seeded sampling.
-- `reference.py`: independent dense matrices from tensor products/projectors.
-- `__main__.py`: deterministic report and standalone viewer generation.
-- `tests/`: primitive truth tables, conventions, independent cross-checks and phase-sensitive checks.
-- `results/report.md`: measured reconstruction findings and limitations.
-- `results/index.html`: standalone gate-by-gate viewer, generated from checked numerical data.
-- `preference.md`: local maintenance and evidence conventions.
+## Read
+- [Plain-language explanation](docs/explainer.md)
+- [Dated research context and proposed direction](docs/research.md)
+- [Executed results and limits](results/report.md)
+- [Numerical data](results/simulation.json)
 
-Qubit1 is the least-significant bit; displayed strings read q4 q3 q2 q1. Gates apply in the listed order to initial0000. Measurement is computational/Z-basis. Tests compare every gate prefix between implementations with tolerance1e-12.
+## Code map
+`quantum_coherence/circuit.py` defines the gate sequence; `simulator.py` applies pairwise state-vector operations; `reference.py` independently constructs dense operators; `__main__.py` regenerates results and the viewer. Tests check primitive gates, bit order, every circuit prefix and relative phase.
 
-The original has `circuit = ...` but uses undefined `circuit1` for execution. A one-name edit addresses that particular error; no claim that it resolves all Julia/version/runtime issues. Source dates remain unverified. This is a reproduction/demo, not an original quantum algorithm or evidence of AI superiority. The original archive remains outside Git; release/attribution must be reviewed before publication.
+Qubit1 is the least-significant bit. Display order is q4 q3 q2 q1. Current implementation is an ideal four-qubit baseline, not a hardware experiment or a reproduction of the papers below. Research extensions remain explicitly proposed until implemented and evaluated.

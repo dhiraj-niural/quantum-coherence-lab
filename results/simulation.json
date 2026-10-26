@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "implementation": "Python reconstruction; not original Julia execution",
+  "implementation": "Python state-vector simulation with independent dense-matrix verification",
   "python_version": "3.9.6",
   "basis_order": "q4 q3 q2 q1; q1 least significant",
   "source_main_tex_sha256": "ae0e0269eb82feeb7b0e4d889e00d4e466c4adccad4bec6c6751b404e22deab3",

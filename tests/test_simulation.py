@@ -1,7 +1,7 @@
 import math
 import unittest
-from quantum_homework.circuit import Gate, GATES
-from quantum_homework import simulator as sim, reference
+from quantum_coherence.circuit import Gate, GATES
+from quantum_coherence import simulator as sim, reference
 
 
 class SimulationTests(unittest.TestCase):
