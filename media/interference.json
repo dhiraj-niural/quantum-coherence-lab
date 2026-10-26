@@ -1,0 +1,17 @@
+{
+  "video": "interference.mp4",
+  "duration_seconds": 36.0,
+  "fps": 24,
+  "streams": [
+    {
+      "codec_name": "h264",
+      "width": 1280,
+      "height": 720,
+      "pix_fmt": "yuv420p"
+    }
+  ],
+  "model": "Ideal four-qubit GHZ relative phase; X measurement probabilities",
+  "hardware_experiment": false,
+  "generative_video": false,
+  "limitations": "Phase vectors represent amplitudes, not physical trajectories. No device noise."
+}
