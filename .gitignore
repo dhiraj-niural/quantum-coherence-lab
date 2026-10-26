@@ -2,3 +2,18 @@ __pycache__/
 *.py[cod]
 .venv/
 originals/
+
+# Local state and private operational material
+.env
+.env.*
+local-only/
+memory/
+network/
+.codex/
+.agents/
+.aws/
+.openai/
+site/.openai/
+state/
+reviews/
+*.bundle
