@@ -46,7 +46,7 @@ Pairwise simulation and independent dense tensor/projector matrices agree at eve
 ## Method and limitations
 Exact-state calculations establish the ideal distribution; seeded sampling illustrates finite-shot variation. Sampling is pseudorandom and version-dependent. Historical source records are preserved separately; this implementation is independently checked in Python.
 
-The two implementations and10tests validate this small circuit, not a general-purpose quantum framework, research novelty, hardware execution or an AI advantage. No performance claims. No source archive or figure is included in Git.
+The two implementations and10tests validate this small circuit, not a general-purpose quantum framework, research novelty, hardware execution or an AI advantage. No performance claims. No source archive or figure is included in Git. The original baseline had 10 tests; the playable challenge adds nine. This public demo does not claim a research-paper result.
 
 ## Reproduction
 Run `python3 -m unittest discover -s tests -v`, then `python3 -m quantum_coherence` from the project root. Open index.html for an offline gate-by-gate view. The viewer reads embedded numerical output; it does not replace numerical tests.
