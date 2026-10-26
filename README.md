@@ -1,6 +1,6 @@
 # Four-qubit homework reconstruction
 
-A local, standard-library-only reconstruction of Dhiraj's four-qubit homework circuit. The original exported source was inspected and the transcribed gate sequence matches it. This is **not a successful execution of the original Julia/Yao environment**: Julia is unavailable here. No paid APIs, network requests or external dependencies.
+A local, standard-library-only reconstruction of Dhiraj's four-qubit homework circuit. The original exported source was inspected and the transcribed gate sequence matches it. This is **not a successful execution of the original Julia/Yao environment**. This implementation uses Python. No paid APIs, network requests or external dependencies.
 
 ```sh
 python3 -m unittest discover -s tests -v
