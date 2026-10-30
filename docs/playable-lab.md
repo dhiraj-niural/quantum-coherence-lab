@@ -73,3 +73,9 @@ Three.js 0.186.1 is distributed under MIT; its notice is retained in
 `site/dist/lab/vendor/LICENSE-three.txt`. The two vendored runtime files were
 obtained from the referenced WONTFIX checkout. The scene, interaction and
 procedural audio in this lab are separate implementations.
+
+## Hosting
+
+The public game is served by GitHub Pages. The deployment workflow runs the
+Python and JavaScript checks, then publishes only `site/dist/`. No server or
+runtime API is required. Changes to that directory on `main` trigger a deploy.

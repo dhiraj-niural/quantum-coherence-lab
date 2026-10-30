@@ -5,8 +5,8 @@
 A short Halloween puzzle about quantum measurement. Explore a candlelit room,
 test two lanterns and find the difference hidden by the first measurement.
 
-**[Play](https://quantum-coherence-game.hanczvs.chatgpt.site)** ·
-[How it works](https://quantum-coherence-game.hanczvs.chatgpt.site/lab/science.html)
+**[Play](https://dhiraj-niural.github.io/quantum-coherence-lab)** ·
+[How it works](https://dhiraj-niural.github.io/quantum-coherence-lab/lab/science.html)
 
 ## Run locally
 
