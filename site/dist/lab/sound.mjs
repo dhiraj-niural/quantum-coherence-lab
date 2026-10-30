@@ -4,6 +4,8 @@ export class LabSound {
     this.muted = false;
     this._context = null;
     this._master = null;
+    this._analyser = null;
+    this.onstatechange = () => {};
     this._ambient = [];
     this._voices = new Set();
     this._starting = null;
@@ -33,10 +35,13 @@ export class LabSound {
         this._context = context;
         this._master = context.createGain();
         this._master.gain.value = 0;
-        this._master.connect(context.destination);
+        this._analyser = context.createAnalyser();
+        this._analyser.fftSize = 2048;
+        this._master.connect(this._analyser).connect(context.destination);
+        context.onstatechange = () => this.onstatechange();
 
         // A restrained room hum. These are fictional ambience, not quantum signals.
-        for (const [frequency, level] of [[55, 0.012], [82.4, 0.007]]) {
+        for (const [frequency, level] of [[110, 0.025], [165, 0.018], [220, 0.012]]) {
           const oscillator = context.createOscillator();
           const gain = context.createGain();
           oscillator.type = 'sine';
@@ -48,15 +53,27 @@ export class LabSound {
         }
       }
       const context = this._context;
-      if (context.state === 'suspended') await context.resume();
+      if (context.state === 'suspended' || context.state === 'interrupted') await context.resume();
       if (this._disposed || context.state !== 'running') return false;
-      this._setLevel(this.muted ? 0 : 0.22, 0.35);
+      this._setLevel(this.muted ? 0 : 0.5, 0.35);
       return true;
     } catch {
       // Keep the visual experiment usable when browser audio is unavailable.
       return false;
     }
   }
+
+  get state() { return this._context?.state ?? 'uninitialized'; }
+
+  /** Signal before the device mixer; nonzero output does not prove speakers are audible. */
+  outputRms() {
+    if (!this._analyser || !this._canPlay()) return 0;
+    const samples = new Float32Array(this._analyser.fftSize);
+    this._analyser.getFloatTimeDomainData(samples);
+    return Math.sqrt(samples.reduce((sum, value) => sum + value * value, 0) / samples.length);
+  }
+
+  testTone() { this._tone(440, 660, 0.7, 0.24); }
 
   _setLevel(level, duration) {
     if (!this._master || !this._context || this._context.state === 'closed') return;
@@ -69,7 +86,7 @@ export class LabSound {
 
   setMuted(muted) {
     this.muted = Boolean(muted);
-    this._setLevel(this.muted ? 0 : 0.22, 0.06);
+    this._setLevel(this.muted ? 0 : 0.5, 0.06);
     if (this.muted) {
       // End transient tones so restoring sound cannot replay an old action.
       const now = this._context?.currentTime ?? 0;
@@ -116,11 +133,11 @@ export class LabSound {
     const now = this._context.currentTime;
     if (now - this._lastCue < 0.09) return;
     this._lastCue = now;
-    if (kind === 'open') this._tone(320, 440, 0.16, 0.07);
-    if (kind === 'measure') this._tone(640, 480, 0.09, 0.06);
+    if (kind === 'open') this._tone(320, 440, 0.16, 0.14);
+    if (kind === 'measure') this._tone(640, 480, 0.09, 0.12);
     if (kind === 'reveal') {
       for (const frequency of [330, 440, 550]) {
-        this._tone(frequency, frequency, 0.42, 0.035);
+        this._tone(frequency, frequency, 0.42, 0.07);
       }
     }
   }
@@ -133,7 +150,7 @@ export class LabSound {
     if (now - this._lastOutcome < 0.055) return;
     this._lastOutcome = now;
     const frequency = parity === 0 ? 440 : 660;
-    this._tone(frequency, frequency, 0.095, 0.065);
+    this._tone(frequency, frequency, 0.095, 0.13);
   }
 
   dispose() {
@@ -152,6 +169,7 @@ export class LabSound {
     }
     this._ambient = [];
     this._master?.disconnect();
+    this._analyser?.disconnect();
     const context = this._context;
     if (context && context.state !== 'closed') return context.close().catch(() => {});
     return Promise.resolve();

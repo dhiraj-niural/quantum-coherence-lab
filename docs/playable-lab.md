@@ -11,7 +11,10 @@ python3 -m http.server 8770 --bind 127.0.0.1 --directory site/dist
 Open `http://127.0.0.1:8770/lab/`. Enter the room, inspect the record, make a
 prediction, and try the measurement settings. Objects and station buttons take
 you to the same interaction. Sound is off initially and can be enabled at the
-top right. A muted playthrough retains all evidence and explanation.
+top right. Enabling it plays a short confirmation tone. “Test sound” repeats the
+tone and checks for a signal before the device mixer; it cannot detect a muted
+tab, system volume or disconnected speakers. “Resume sound” appears if the
+browser pauses audio. A muted playthrough retains all evidence and explanation.
 
 ## Structure
 
@@ -49,7 +52,7 @@ a designed representation of observations, not the physical sound of a state.
 
 ```sh
 python3 -m unittest discover -s tests -v
-node --test tests/model.test.mjs
+node --test tests/*.test.mjs
 ```
 
 Python checks the shipped reference against the simulator. JavaScript checks

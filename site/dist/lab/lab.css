@@ -7,3 +7,5 @@
 .entry{max-height:calc(100dvh - 155px);overflow-y:auto;padding-bottom:15px;scrollbar-width:thin}
 @media(max-height:600px){header{height:50px}.entry{margin-top:12px;max-height:calc(100dvh - 85px)}.entry h1{font-size:54px;margin:16px 0}.intro{margin:14px 0}.entry-note{margin-top:12px}footer{display:none}.mission{top:65px;max-width:30vw}.mission h2{font-size:18px}.stations{bottom:75px}.notebook,.reset{bottom:20px}.room-caption{bottom:54px}.panel{top:65px;bottom:20px}.stations button{padding:10px 12px}}
 @media(max-height:600px) and (max-width:600px){.panel{top:65px;bottom:135px}.panel-open .mission{display:none}.stations{bottom:67px}.room-caption{display:none}.mission{max-width:90vw}.notebook,.reset{bottom:20px}}
+
+.audio-controls{display:flex;gap:6px;position:relative;flex-shrink:0}.audio-controls output{position:absolute;right:0;top:44px;width:min(300px,85vw);padding:12px;background:#0b171bf5;border:1px solid var(--line);font:11px/1.5 var(--mono);letter-spacing:0;z-index:5}header{z-index:4}@media(max-width:600px){header{gap:8px;padding:0 14px}.audio-controls button{padding:9px 8px;font-size:10px}.wordmark{letter-spacing:0}}

@@ -1,5 +1,5 @@
 import {createExperiment} from './model.mjs';
-import {LabSound} from './sound.mjs';
+import {LabSound} from './sound.mjs?v=2';
 
 const $=s=>document.querySelector(s);
 const sound=new LabSound();
@@ -50,9 +50,44 @@ function reveal(){
   $('#flip-z').onclick=()=>{$('#transfer').textContent='Z still gives 0000 or 1111 equally. It hides the sign. X changes: even outcomes reinforce and odd outcomes cancel.';};
 }
 function visit(name){if(!started)return;clearTones();({archive,bench,reveal})[name]();}
-async function toggleSound(){if(userMuted){const ok=await sound.start();if(!ok){$('#sound').textContent='Sound unavailable';return;}}userMuted=!userMuted;sound.setMuted(userMuted||document.hidden);$('#sound').textContent=userMuted?'Sound off':'Sound on';$('#sound').setAttribute('aria-pressed',String(!userMuted));}
+let checkingSound=false;
+function audioStatus(message){$('#audio-status').hidden=!message;$('#audio-status').textContent=message;}
+function syncSound(){
+  const ready=sound.state==='running';
+  $('#sound').textContent=userMuted?'Sound off':ready?'Sound on':'Resume sound';
+  $('#sound').setAttribute('aria-pressed',String(!userMuted&&ready));
+  $('#test-sound').hidden=userMuted;
+}
+async function enableSound(){
+  const ok=await sound.start();
+  if(!ok){audioStatus('Audio could not start. Try again while this tab is active.');syncSound();return false;}
+  userMuted=false;sound.setMuted(document.hidden);syncSound();return true;
+}
+async function testSound(){
+  if(checkingSound)return;
+  checkingSound=true;$('#test-sound').disabled=true;
+  try{
+    if(!await enableSound())return;
+    sound.testTone();audioStatus('Playing a short test tone…');
+    await new Promise(resolve=>setTimeout(resolve,150));
+    if(userMuted||document.hidden){audioStatus('Sound paused. Return to the lab to test again.');return;}
+    const rms=sound.outputRms();
+    audioStatus(rms>0.001?'Audio signal detected. If silent, check the tab mute, output device and system volume.':'No audio signal detected. Try enabling sound again.');
+    $('#audio-status').dataset.rms=rms.toFixed(5);
+  }finally{checkingSound=false;$('#test-sound').disabled=false;}
+}
+async function toggleSound(){
+  if(userMuted||sound.state!=='running'){await testSound();return;}
+  userMuted=true;sound.setMuted(true);clearTones();syncSound();audioStatus('');
+}
 $('#sound').onclick=toggleSound;
-document.addEventListener('visibilitychange',()=>{sound.setMuted(userMuted||document.hidden);if(document.hidden)clearTones();});
+$('#test-sound').onclick=testSound;
+sound.onstatechange=syncSound;
+document.addEventListener('visibilitychange',()=>{
+  sound.setMuted(userMuted||document.hidden);
+  if(document.hidden)clearTones();
+  syncSound();
+});
 $('#enter').onclick=()=>{started=true;$('#entry').hidden=true;$('#play').hidden=false;room?.focus('overview');progress();$('[data-station=archive]').focus();};
 document.querySelectorAll('[data-station]').forEach(b=>b.onclick=()=>visit(b.dataset.station));
 $('#close-panel').onclick=()=>{$('#panel').hidden=true;document.body.classList.remove('panel-open');room?.focus('overview');const current=$('[data-station].selected');current?.focus();document.querySelectorAll('[data-station]').forEach(b=>b.classList.remove('selected'));};
