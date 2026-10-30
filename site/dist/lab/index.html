@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>The missing difference · Quantum Coherence Lab</title>
+  <meta name="description" content="A short playable investigation about what a quantum measurement can hide.">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body>
+  <canvas id="room" aria-hidden="true"></canvas><div class="vignette" aria-hidden="true"></div>
+  <header><a class="wordmark" href="../index.html">Q / COHERENCE LAB</a><span class="session">CASE 01 · IDEAL SIMULATION</span><button id="sound" aria-pressed="false">Sound off</button></header>
+  <main>
+    <section id="entry" class="entry">
+      <p class="eyebrow">AN EXPERIMENT IN SEEING DIFFERENTLY</p>
+      <h1>The missing<br><em>difference.</em></h1>
+      <p class="intro">Two machines. The same results.<br>One difference your instrument cannot see.</p>
+      <button id="enter" class="primary" disabled>Preparing the lab…</button>
+      <p class="entry-note">A short investigation. No physics background needed.<br>Optional sound · Click to explore · About 3 minutes</p>
+      <p id="load-error" role="alert"></p>
+    </section>
+    <section id="play" hidden>
+      <div class="mission"><span class="eyebrow">YOUR INVESTIGATION</span><h2 id="objective">Recover the measurement record.</h2><p id="progress">0 / 3 discoveries</p></div>
+      <nav class="stations" aria-label="Explore the room">
+        <button data-station="archive"><span>01</span> The record <small>READ</small></button>
+        <button data-station="bench"><span>02</span> The instrument <small>EXPERIMENT</small></button>
+        <button data-station="reveal"><span>03</span> The difference <small>UNDERSTAND</small></button>
+      </nav>
+      <div class="room-caption" id="room-caption">Select an object to approach it.</div>
+      <aside id="panel" class="panel" hidden aria-label="Investigation station">
+        <div class="panel-top"><span id="station-label" class="eyebrow"></span><button id="close-panel" aria-label="Return to room">×</button></div>
+        <div id="panel-content"></div>
+      </aside>
+      <button id="notebook" class="notebook">Field notes <span id="note-count">0</span></button>
+      <button id="reset" class="reset">New case</button>
+    </section>
+  </main>
+  <dialog id="journal"><div class="panel-top"><span class="eyebrow">YOUR FIELD NOTES</span><button id="close-journal" aria-label="Close field notes">×</button></div><h2>What you know.</h2><ol id="notes"></ol><p class="fine">Notes stay in this session. Each batch measures fresh independent preparations.</p></dialog>
+  <footer><span>FOUR QUBITS / TWO PREPARATIONS</span><a href="../article.html">Read the experiment ↗</a></footer>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

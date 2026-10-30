@@ -9,6 +9,10 @@ A Python environment for inspecting quantum state evolution and checking measure
 
 The browser game lives in `site/dist/`. Run `python3 -m http.server 8767 --directory site/dist` and open localhost:8767. Change Z to X, identify the coherent box, and compare finite samples with exact probabilities. No account, external model or paid API is needed.
 
+## Play the lab
+
+The click-to-explore investigation is at `site/dist/lab/`: a small 3D room, optional procedural sound, measurement choices and a field notebook. See [run instructions and scientific limits](docs/playable-lab.md). The existing article and chart view remain available.
+
 ## Run
 ```sh
 python3 -m unittest discover -s tests -v
