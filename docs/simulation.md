@@ -6,10 +6,10 @@ python3 -m quantum_coherence
 Open `results/index.html` for the interactive viewer. Python standard library only.
 
 ## Read
-- [Plain-language explanation](docs/explainer.md)
-- [Dated research context and proposed direction](docs/research.md)
-- [Executed results and limits](results/report.md)
-- [Numerical data](results/simulation.json)
+- [Plain-language explanation](explainer.md)
+- [Dated research context and proposed direction](research.md)
+- [Executed results and limits](../results/report.md)
+- [Numerical data](../results/simulation.json)
 
 ## Code map
 `quantum_coherence/circuit.py` defines the gate sequence; `simulator.py` applies pairwise state-vector operations; `reference.py` independently constructs dense operators; `__main__.py` regenerates results and the viewer. Tests check primitive gates, bit order, every circuit prefix and relative phase.
