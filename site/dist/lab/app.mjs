@@ -1,103 +1,117 @@
-import {createExperiment} from './model.mjs';
-import {LabSound} from './sound.mjs?v=2';
+import {createInvestigation} from './game.mjs';
+import {LabSound} from './sound.mjs?v=3';
+import {bindAudio} from './audio-ui.mjs';
 
-const $=s=>document.querySelector(s);
-const sound=new LabSound();
-let room=null,experiment=null,started=false,userMuted=true,basis='Z',batch=null,read=false,solved=false,discovered=false,notes=[],pendingTimers=[];
-const captions={archive:'An archived result. A question left open.',bench:'Change the test. Keep track of what you actually observe.',reveal:'The missing outcomes were the clue.'};
-const objectives=()=>!read?'Recover the measurement record.':!solved?'Find a measurement that tells them apart.':!discovered?'Find out why the outcomes disappear.':'You found the difference. Now change the question.';
-function note(text){if(!notes.includes(text))notes.push(text);$('#note-count').textContent=notes.length;}
-function progress(){ $('#objective').textContent=objectives();$('#progress').textContent=`${Number(read)+Number(solved)+Number(discovered)} / 3 discoveries`;document.querySelectorAll('[data-station]').forEach(b=>b.classList.toggle('done',b.dataset.station==='archive'?read:b.dataset.station==='bench'?solved:discovered));}
-function clearTones(){pendingTimers.forEach(clearTimeout);pendingTimers=[];}
-function panel(name,html){$('#panel').hidden=false;$('#station-label').textContent={archive:'01 / THE RECORD',bench:'02 / THE INSTRUMENT',reveal:'03 / THE DIFFERENCE'}[name];$('#panel-content').innerHTML=html;$('#panel').scrollTop=0;document.body.classList.add('panel-open');const heading=$('#panel-content h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}$('#room-caption').textContent=captions[name];document.querySelectorAll('[data-station]').forEach(b=>b.classList.toggle('selected',b.dataset.station===name));room?.focus(name);sound.cue('open');}
+const $=selector=>document.querySelector(selector);
+const sound=new LabSound();bindAudio(sound);
+let audioEpoch=0;
+document.addEventListener('visibilitychange',()=>{if(document.hidden)audioEpoch++;});
+let room=null,game=null,reference=null,started=false,basis='Z',station='overview',notes=[],hintLevel=0,timers=[],busy=false,endingShown=false;
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function clearTimers(){timers.forEach(clearTimeout);timers=[];busy=false;}
+function later(fn,ms){timers.push(setTimeout(fn,ms));}
+function remember(text){if(!notes.includes(text))notes.push(text);$('#note-count').textContent=notes.length;}
+function whisper(text){$('#whisper').textContent=text;}
+function progress(){
+ const s=game.state;
+ $('#chapter').textContent=s.solved?'03 / THE LAST LIGHT':s.hasLens?'02 / A DIFFERENT WAY TO LOOK':'01 / THE KEEPER’S ROOM';
+ $('#objective').textContent=s.solved?'The path is open.':s.lastX?'Use your evidence at the door.':!s.seenZ?'Try the lanterns on the table.':!s.hasLens?'The journal holds an unfinished note.':!s.lastX?'Try the lens you found.':'Use your evidence at the door.';
+ $('#inventory').hidden=!s.hasLens;
+}
+function openPanel(name,title,html){
+ station=name;room?.focus(name);sound.cue('open');
+ $('#panel').hidden=false;document.body.classList.add('panel-open');$('#station-label').textContent=title;$('#panel-content').innerHTML=html;$('#panel').scrollTop=0;
+ const heading=$('#panel-content h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}
+ document.querySelectorAll('[data-station]').forEach(b=>b.classList.toggle('selected',b.dataset.station===name));
+}
+function closePanel(){
+ $('#panel').hidden=true;document.body.classList.remove('panel-open');station='overview';room?.focus('overview');
+ document.querySelectorAll('[data-station]').forEach(b=>b.classList.remove('selected'));
+ $('#step-back').focus({preventScroll:true});
+}
 function archive(){
-  panel('archive',`<h2>They look the same.</h2><p>The labels came off two preparation machines. One makes a quantum combination. The other makes a random choice between two alternatives.</p><div class="record"><div class="row"><span>Machine A</span><span>0000 or 1111</span></div><div class="row"><span>Machine B</span><span>0000 or 1111</span></div><small>SETTING Z · EXACT MODEL PREDICTIONS<br>Each pattern has a 50% chance in either machine.</small></div><p>Each result is four bits, one per qubit. On this setting, the two machines have exactly the same odds.</p><p>Would taking a thousand more measurements expose the difference?</p><div class="action-row"><button id="predict-more">More data might help</button><button id="predict-change">I need a different test</button></div><p id="prediction" class="status">Make a prediction. You can change your mind.</p><button id="to-bench" class="primary" hidden>Try the instrument →</button><p class="fine">A fictional lab around a real ideal simulation. Every measurement uses a freshly prepared system.</p>`);
-  const predict=more=>{read=true;note(`Prediction: ${more?'try collecting more Z measurements':'try a different measurement'}.`);$('#prediction').textContent=more?'Let’s test that. Watch whether the differences are a pattern or just random fluctuation.':'A useful suspicion. Try the available settings and compare what they reveal.';$('#to-bench').hidden=false;progress();sound.cue('open');};
-  $('#predict-more').onclick=()=>predict(true);$('#predict-change').onclick=()=>predict(false);$('#to-bench').onclick=bench;
+ const s=game.state;
+ openPanel('archive','THE KEEPER’S JOURNAL',`<h2>A note. A second lens.</h2><div class="item"><div class="lens-art" aria-hidden="true"></div><p>“One lantern uses a quantum preparation. The other uses a random mixture. Exactly one of each.”</p></div><p>“Through the <strong>turned lens</strong>, the quantum lantern always prints an <strong>odd number of lit marks</strong>. Find the one that breaks this rule.”</p><div class="action-row"><button id="take-lens" ${s.hasLens?'disabled':''}>${s.hasLens?'Lens collected':'Take the lens ◈'}</button><button id="go-table">Back to the table</button></div><p class="fine">Odd means 1 or 3 lit marks. Even means 0, 2 or 4.</p>`);
+ remember('Keeper’s promise: exactly one specified quantum preparation and one random mixture. Under the turned lens, the quantum one always prints an odd number of lit marks.');
+ $('#take-lens').onclick=()=>{game.takeLens();remember('Found the turned lens. It changes the measurement, not the preparation.');progress();archive();$('#go-table').focus();whisper('The glass is cold. The question is different.');sound.cue('reveal');};
+ $('#go-table').onclick=bench;
+}
+function marks(bits){return `<div class="marks" role="img" aria-label="${[...bits].filter(b=>b==='1').length} lit marks: ${bits}">${[...bits].map(bit=>`<i class="mark ${bit==='1'?'lit':''}" aria-hidden="true"></i>`).join('')}</div>`;}
+function batchHTML(batch){
+ return `<div class="lanterns">${['A','B'].map(label=>{
+ const result=batch?.boxes.find(b=>b.label===label);
+ return `<div class="lantern-card"><h3>${label}</h3><div class="receipt">${result?result.recent.slice(-4).map(marks).join(''):'<div class="counts">No marks yet</div>'}</div><div class="counts">${result?`Even ${result.even} · Odd ${result.odd}<br>16 trials · last 4 rows shown`: 'Pull the lever to test'}</div></div>`;
+ }).join('')}</div>`;
 }
 function bench(){
-  if(!read){archive();return;}
-  panel('bench',`<h2>Ask a different question.</h2><p>Choose how to measure. Each run records 64 fresh preparations from each machine.</p><div class="action-row" role="group" aria-label="Measurement setting"><button id="basis-z" class="${basis==='Z'?'active':''}" aria-pressed="${basis==='Z'}">Setting Z</button><button id="basis-x" class="${basis==='X'?'active':''}" aria-pressed="${basis==='X'}">Setting X</button></div><button id="measure" class="primary">Run 64 measurements</button><button id="hint" class="hint">A hint?</button><div id="results"></div><p id="finding" class="status" aria-live="polite">${solved?'Case solved. You can keep exploring.':'Make a measurement before drawing a conclusion.'}</p><div class="action-row"><button id="choose-a">A is the quantum combination</button><button id="choose-b">B is the quantum combination</button></div><button id="to-reveal" class="primary" ${solved?'':'hidden'}>See what changed →</button><p class="fine">A new run replaces the visible batch. Earlier summaries stay in Field notes. Z reads 0/1; in X, the same labels mean +1/−1.</p>`);
-  $('#basis-z').onclick=()=>changeBasis('Z');$('#basis-x').onclick=()=>changeBasis('X');$('#measure').onclick=measure;
-  $('#hint').onclick=()=>{$('#finding').textContent='Compare how many 1s are in each four-bit result. Does one setting give you a pattern the other does not?';note('Hint opened: compare even and odd counts of 1s.');};
-  $('#choose-a').onclick=()=>choose('A');$('#choose-b').onclick=()=>choose('B');$('#to-reveal').onclick=reveal;
-  if(batch)renderBatch();
+ clearTimers();
+ const s=game.state, batch=s.lastBatch?.basis===basis?s.lastBatch:null;
+ openPanel('bench','THE LANTERN TABLE',`<h2>Ask the glass.</h2><div class="action-row"><button id="ordinary" class="${basis==='Z'?'active':''}" aria-pressed="${basis==='Z'}">Ordinary lens</button><button id="turned" class="${basis==='X'?'active':''}" aria-pressed="${basis==='X'}" ${!s.hasLens?'disabled':''}>${s.hasLens?'Turned lens ◈':'Missing lens ◇'}</button></div><div id="results">${batchHTML(batch)}</div><div class="action-row"><button id="pull" class="primary">Pull the lever</button><button id="go-door">Try the door →</button></div><p id="finding" class="status" role="status">${batch?basis==='Z'?'Both give all-lit or all-dark rows. A different glass might help.':'Count the lit marks. Which lantern breaks the keeper’s rule?':'Each row has four marks. A lit mark counts as one.'}</p><button id="hint" class="hint">A small hint?</button>`);
+ $('#ordinary').onclick=()=>{basis='Z';bench();$('#ordinary').focus();};
+ if(s.hasLens)$('#turned').onclick=()=>{basis='X';bench();$('#turned').focus();sound.cue('open');};
+ $('#pull').onclick=pull;$('#go-door').onclick=door;$('#hint').onclick=hint;
 }
-function changeBasis(next){clearTones();basis=next;batch=null;bench();$(`#basis-${next.toLowerCase()}`).focus({preventScroll:true});}
-function renderBatch(){
-  $('#results').innerHTML=`<div class="measurements">${batch.boxes.map(b=>`<div class="box-result"><h3>Machine ${b.label} / ${batch.basis}</h3><div class="key"><span>EVEN ${b.even}</span><span>ODD ${b.odd}</span></div><div class="meter" role="img" aria-label="${b.even} even, ${b.odd} odd outcomes"><span class="even" style="width:${b.even/batch.shots*100}%"></span><span class="odd" style="width:${b.odd/batch.shots*100}%"></span></div>${batch.basis==='Z'?`<div class="fine">0000: ${b.counts[0]} · 1111: ${b.counts[15]}</div>`:''}<div class="readings">${b.recent.join(' ')}</div></div>`).join('')}</div><p class="fine">EVEN / ODD = number of 1s in a result.<br>For example: 0011 has two 1s (even); 0001 has one (odd). Last eight results shown. Sound maps A’s last outcomes to low (even) and high (odd) tones.</p>`;
+function pull(){
+ if(busy)return;busy=true;$('#pull').disabled=true;$('#finding').textContent='The mechanism stirs…';
+ const batch=game.measure(basis),epoch=audioEpoch;room?.flash();sound.cue('measure');
+ remember(`${basis==='Z'?'Ordinary':'Turned'} lens: A ${batch.boxes[0].even} even / ${batch.boxes[0].odd} odd; B ${batch.boxes[1].even} even / ${batch.boxes[1].odd} odd. 16 fresh trials each.`);
+ later(()=>{
+  busy=false;progress();if(station!=='bench')return;
+  $('#results').innerHTML=batchHTML(batch);$('#pull').disabled=false;
+  $('#finding').textContent=basis==='Z'?'Both give all-lit or all-dark rows. The keeper left something in the journal.':'Look for an even row: 0, 2 or 4 lit marks. That lantern breaks the rule.';
+  if(!game.state.hasLens)whisper('A loose page rustles in the journal.');
+  batch.boxes[0].recent.slice(-4).forEach((bits,i)=>later(()=>{if(!document.hidden&&epoch===audioEpoch)sound.outcome([...bits].filter(b=>b==='1').length%2);},i*130));
+ },reduced?0:650);
 }
-function measure(){
-  clearTones();batch=experiment.measure(basis,64);renderBatch();room?.flash();sound.cue('measure');
-  const recent=batch.boxes[0].recent;recent.forEach((bits,i)=>pendingTimers.push(setTimeout(()=>sound.outcome([...bits].filter(c=>c==='1').length%2),200+i*100)));
-  $('#finding').textContent=basis==='Z'?'Both produce 0000 and 1111. Different counts are sampling noise, not a reliable way to identify the machines.':'A lab note predicts that this particular quantum combination cancels even X outcomes. The random-choice preparation can produce both. Use the observed even outcomes to rule one machine out.';
-  note(`${basis} batch, 64 fresh trials per machine. ${batch.boxes.map(b=>`${b.label}: ${b.even} even / ${b.odd} odd`).join('; ')}.`);
+function hint(){
+ const hints=['Explore the journal. The keeper left a rule and another lens.','The ordinary lens hides the difference. Try the turned lens.','An even row rules out that lantern. The keeper promised one of each, so choose the other.'];
+ $('#finding').textContent=hints[Math.min(hintLevel++,2)];
+}
+function door(){
+ const s=game.state;
+ if(s.solved){showEnding();return;}
+ const evidence=s.lastX?`Turned lens: A gave ${s.lastX.boxes[0].even} even rows. B gave ${s.lastX.boxes[1].even}.`:'The door has two sockets. You need evidence before choosing.';
+ openPanel('reveal','THE COURTYARD DOOR',`<h2>Which light will you trust?</h2><p>The keeper’s quantum lantern belongs here.</p><p class="fine">${evidence}</p><div class="action-row"><button id="choose-a">Use lantern A</button><button id="choose-b">Use lantern B</button></div><p id="finding" class="status" role="status">A wrong choice won’t end the game.</p><button id="hint" class="hint">A small hint?</button>`);
+ $('#choose-a').onclick=()=>choose('A');$('#choose-b').onclick=()=>choose('B');$('#hint').onclick=hint;
 }
 function choose(label){
-  if(!batch){$('#finding').textContent='Take a measurement first. A guess alone is not evidence.';return;}
-  if(batch.basis==='Z'){$('#finding').textContent='Z cannot tell these preparations apart. Their exact probabilities are identical, no matter how many trials you run. Try changing the measurement.';note('Z cannot identify either machine: both have the same exact probabilities.');return;}
-  if(batch.boxes.every(b=>b.even===0)){$('#finding').textContent='Inconclusive: both machines happened to produce only odd outcomes. A random mixture can do that by chance. Run another batch.';return;}
-  const other=batch.boxes.find(b=>b.label!==label);
-  if(!experiment.identify(label)){$('#finding').textContent=`Machine ${label} produced even-parity outcomes. Our particular quantum combination cannot do that in X. Look at the other machine.`;return;}
-  if(!other.even){$('#finding').textContent='This batch is inconclusive: both happened to produce only odd outcomes. Run another batch. A random mixture can also produce all-odd data by chance.';return;}
-  solved=true;$('#finding').textContent=`Yes. The even X outcomes rule out the specified quantum preparation for machine ${other.label}. Under our two-candidate promise, ${label} is the quantum combination.`;$('#finding').classList.add('success');$('#to-reveal').hidden=false;note(`Identified ${label} using even X outcomes in the other machine. This conclusion relies on the ideal two-candidate promise.`);sound.cue('reveal');progress();
+ const result=game.choose(label);
+ const responses={
+  'need-test':'The lock stays dark. Try the turned lens and compare the marks first.',
+  'ruled-out':'That lantern printed an even row. It breaks the keeper’s rule. Try the other.',
+  'inconclusive':'Neither lantern printed an even row this time. The evidence is inconclusive. Pull again.',
+  'inconsistent':'The evidence doesn’t fit. Start a fresh case.'
+ };
+ if(result.kind!=='solved'){$('#finding').textContent=responses[result.kind];return;}
+ remember(`An even row excluded the other lantern. Under the keeper’s two-candidate promise, ${label} is the specified quantum preparation.`);
+ $('#finding').textContent='The latch lifts. A light answers from outside.';
+ $('#choose-a').disabled=true;$('#choose-b').disabled=true;
+ room?.setSolved(true);sound.cue('reveal');progress();
+ later(()=>{closePanel();room?.focus('reveal');whisper('The courtyard is waking.');},reduced?0:600);
+ later(showEnding,reduced?100:2200);
 }
-function reveal(){
-  if(!solved){panel('reveal','<h2>The explanation is still sealed.</h2><p>First, use a measurement to identify the two machines. Then we can explain the evidence you found.</p><button id="back-bench" class="primary">Return to the instrument →</button>');$('#back-bench').onclick=bench;return;}
-  discovered=true;note('Interference: add signed amplitudes before squaring. Opposite contributions cancel; matching ones reinforce.');progress();
-  panel('reveal',`<span class="tag">CASE RESOLVED</span><h2>Absence was the evidence.</h2><p>The quantum preparation contains two alternatives with a relative minus sign. Setting X lets their contributions to an outcome meet.</p><div class="math-card"><h3>AN EVEN OUTCOME · e.g. 0011</h3><div class="amplitudes" aria-label="Positive a plus negative a equals zero"><span class="amp"></span><span>+</span><span class="amp minus"></span><span class="zero">= 0</span></div><p>Equal and opposite amplitudes cancel. Square zero and the probability is zero. That outcome never appears in this ideal preparation.</p></div><p>For odd outcomes, the contributions reinforce instead. The random mixture cannot cancel this way: it averages <em>probabilities</em>, so even outcomes remain possible.</p><p class="fine">The arrows show a calculation, not particle paths. This distinguishes two promised preparations, not all possible quantum states.</p><h3>One last prediction.</h3><p>What if the relative minus sign becomes a plus?</p><div class="action-row"><button id="flip-even">X becomes even-only</button><button id="flip-z">Z changes instead</button></div><p id="transfer" class="status">Try your new understanding.</p><a class="article-link" href="../article.html">See the derivation and reproduce it in Python ↗</a><a class="article-link" href="../learn_measurement.py" download>Download the standalone simulation ↓</a>`);
-  $('#flip-even').onclick=()=>{$('#transfer').textContent='Exactly. Z stays unchanged; X becomes even-only. The sign changes which contributions cancel. “Quantum” does not always mean odd.';note('Transfer prediction: changing minus to plus swaps X parity while leaving Z unchanged.');sound.cue('reveal');};
-  $('#flip-z').onclick=()=>{$('#transfer').textContent='Z still gives 0000 or 1111 equally. It hides the sign. X changes: even outcomes reinforce and odd outcomes cancel.';};
+function showEnding(){
+ endingShown=true;$('#panel').hidden=true;document.body.classList.remove('panel-open');$('#play').hidden=true;$('#ending').hidden=false;$('#ending').classList.add('fade-in');$('#understand').focus({preventScroll:true});
 }
-function visit(name){if(!started)return;clearTones();({archive,bench,reveal})[name]();}
-let checkingSound=false;
-function audioStatus(message){$('#audio-status').hidden=!message;$('#audio-status').textContent=message;}
-function syncSound(){
-  const ready=sound.state==='running';
-  $('#sound').textContent=userMuted?'Sound off':ready?'Sound on':'Resume sound';
-  $('#sound').setAttribute('aria-pressed',String(!userMuted&&ready));
-  $('#test-sound').hidden=userMuted;
-}
-async function enableSound(){
-  const ok=await sound.start();
-  if(!ok){audioStatus('Audio could not start. Try again while this tab is active.');syncSound();return false;}
-  userMuted=false;sound.setMuted(document.hidden);syncSound();return true;
-}
-async function testSound(){
-  if(checkingSound)return;
-  checkingSound=true;$('#test-sound').disabled=true;
-  try{
-    if(!await enableSound())return;
-    sound.testTone();audioStatus('Playing a short test tone…');
-    await new Promise(resolve=>setTimeout(resolve,150));
-    if(userMuted||document.hidden){audioStatus('Sound paused. Return to the lab to test again.');return;}
-    const rms=sound.outputRms();
-    audioStatus(rms>0.001?'Audio signal detected. If silent, check the tab mute, output device and system volume.':'No audio signal detected. Try enabling sound again.');
-    $('#audio-status').dataset.rms=rms.toFixed(5);
-  }finally{checkingSound=false;$('#test-sound').disabled=false;}
-}
-async function toggleSound(){
-  if(userMuted||sound.state!=='running'){await testSound();return;}
-  userMuted=true;sound.setMuted(true);clearTones();syncSound();audioStatus('');
-}
-$('#sound').onclick=toggleSound;
-$('#test-sound').onclick=testSound;
-sound.onstatechange=syncSound;
-document.addEventListener('visibilitychange',()=>{
-  sound.setMuted(userMuted||document.hidden);
-  if(document.hidden)clearTones();
-  syncSound();
+function visit(name){if(!started||endingShown)return;clearTimers();({archive,bench, reveal:door})[name]?.();}
+$('#enter').onclick=()=>{started=true;$('#entry').hidden=true;$('#play').hidden=false;room?.focus('overview');progress();whisper('A lever waits on the table.');$('[data-station="bench"]').focus();};
+document.querySelectorAll('[data-station]').forEach(button=>button.onclick=()=>visit(button.dataset.station));
+$('#close-panel').onclick=closePanel;$('#step-back').onclick=closePanel;
+$('#understand').onclick=()=>{location.href='science.html';};
+$('#return-room').onclick=()=>{endingShown=false;$('#ending').hidden=true;$('#play').hidden=false;room?.focus('reveal');whisper('The light stays on.');$('#step-back').focus();};
+$('#notebook').onclick=()=>{$('#notes').replaceChildren(...(notes.length?notes:['No notes yet. Try the table or inspect the journal.']).map(text=>{const li=document.createElement('li');li.textContent=text;return li;}));$('#journal').showModal();};
+$('#close-journal').onclick=()=>$('#journal').close();$('#help').onclick=()=>$('#settings').showModal();$('#close-help').onclick=()=>$('#settings').close();
+$('#reset').onclick=()=>{clearTimers();game=createInvestigation(reference);basis='Z';notes=[];hintLevel=0;endingShown=false;$('#note-count').textContent=0;$('#ending').hidden=true;$('#play').hidden=false;room?.setSolved(false);closePanel();progress();whisper('Two lanterns. A fresh mystery.');};
+addEventListener('keydown',event=>{
+ if(!started||endingShown||$('#journal').open||$('#settings').open||event.altKey||event.metaKey||event.ctrlKey||event.target.matches('input,textarea,select'))return;
+ const direction={a:'left',ArrowLeft:'left',d:'right',ArrowRight:'right',w:'forward',ArrowUp:'forward',s:'back',ArrowDown:'back'}[event.key];
+ if(event.key==='Escape'){event.preventDefault();closePanel();return;}
+ if(!direction||event.repeat)return;event.preventDefault();
+ if(direction==='back'){closePanel();return;}
+ const destination=room?.move(direction)||({left:'archive',right:'reveal',forward:'bench'})[direction];visit(destination);
 });
-$('#enter').onclick=()=>{started=true;$('#entry').hidden=true;$('#play').hidden=false;room?.focus('overview');progress();$('[data-station=archive]').focus();};
-document.querySelectorAll('[data-station]').forEach(b=>b.onclick=()=>visit(b.dataset.station));
-$('#close-panel').onclick=()=>{$('#panel').hidden=true;document.body.classList.remove('panel-open');room?.focus('overview');const current=$('[data-station].selected');current?.focus();document.querySelectorAll('[data-station]').forEach(b=>b.classList.remove('selected'));};
-$('#notebook').onclick=()=>{$('#notes').replaceChildren(...notes.map(t=>{const li=document.createElement('li');li.textContent=t;return li;}));if(!notes.length){const li=document.createElement('li');li.textContent='No records yet. Start at the archive.';$('#notes').append(li);}$('#journal').showModal();};
-$('#close-journal').onclick=()=>$('#journal').close();
-addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#journal').open)$('#close-panel').click();});
-let reference;
-$('#reset').onclick=()=>{clearTones();experiment=createExperiment(reference);basis='Z';batch=null;read=false;solved=false;discovered=false;notes=[];$('#note-count').textContent=0;$('#panel').hidden=true;document.body.classList.remove('panel-open');$('[data-station=archive]').focus();room?.focus('overview');progress();document.querySelectorAll('[data-station]').forEach(b=>b.classList.remove('selected'));};
 try{
-  const response=await fetch('../distributions.json');if(!response.ok)throw new Error('Reference data unavailable');reference=await response.json();experiment=createExperiment(reference);
-  try{const {createRoom}=await import('./scene.mjs');room=createRoom($('#room'),visit);}catch(error){console.warn('3D view unavailable; all stations remain accessible.',error);$('#room-caption').textContent='3D view unavailable. Use the station buttons to play.';}
-  $('#enter').disabled=false;$('#enter').textContent='Enter the lab →';
-}catch(error){$('#load-error').textContent='The reference data could not load. Open this demo through its local server, then reload.';console.error(error);}
+ const response=await fetch('../distributions.json');if(!response.ok)throw new Error('Reference unavailable');reference=await response.json();game=createInvestigation(reference);
+ try{const {createRoom}=await import('./scene.mjs?v=3');room=createRoom($('#room'),visit);}catch(error){console.warn('3D unavailable; buttons retain the full puzzle.',error);$('#load-error').textContent='3D is unavailable here. You can still play using the room buttons.';}
+ $('#enter').disabled=false;$('#enter').textContent='Enter the room →';
+}catch(error){$('#load-error').textContent='The experiment could not load. Reload this page to try again.';console.error(error);}

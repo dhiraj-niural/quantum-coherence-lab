@@ -9,7 +9,7 @@ export function createRoom(canvas, onSelect) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.35;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x0b0807, .055);
   const camera = new THREE.PerspectiveCamera(48, 1, .1, 45);

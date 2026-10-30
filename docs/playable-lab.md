@@ -1,4 +1,4 @@
-# The missing difference
+# The Last Light
 
 A short, click-to-explore investigation built around the existing four-qubit
 coherent-state versus mixture simulation. It is an ideal teaching model, not a
@@ -8,8 +8,9 @@ hardware experiment or a new physics result.
 python3 -m http.server 8770 --bind 127.0.0.1 --directory site/dist
 ```
 
-Open `http://127.0.0.1:8770/lab/`. Enter the room, inspect the record, make a
-prediction, and try the measurement settings. Objects and station buttons take
+Open `http://127.0.0.1:8770/lab/`. Enter the room, inspect the journal, collect the turned lens and compare measurement settings.
+Use the evidence at the door. WASD/arrow keys move between viewpoints; Escape
+or Step back returns to the room. Objects and station buttons take
 you to the same interaction. Sound is off initially and can be enabled at the
 top right. Enabling it plays a short confirmation tone. “Test sound” repeats the
 tone and checks for a signal before the device mixer; it cannot detect a muted
@@ -20,7 +21,8 @@ browser pauses audio. A muted playthrough retains all evidence and explanation.
 
 - `lab/model.mjs` validates and samples the Python-generated `distributions.json`.
   Machine identities are shuffled once per case. Each measurement is a new batch.
-- `lab/app.mjs` coordinates the prediction, measurement, identification, reveal
+- `lab/game.mjs` gates the escape on positive evidence under the two-candidate promise.
+- `lab/app.mjs` coordinates discovery, measurement, identification, reveal
   and session-only notebook.
 - `lab/scene.mjs` draws an original Three.js room with click-to-approach views.
   Its props and dust are scenery, not a representation of quantum trajectories.
@@ -44,8 +46,7 @@ All-odd finite samples alone do not certify general coherence or entanglement.
 The game rejects an inconclusive all-odd pair rather than rewarding a guess.
 
 Each shot measures a fresh preparation. The notebook stores batch summaries,
-not a cumulative experiment. The optional final prediction changes the relative
-sign conceptually; the linked Python exercise reproduces that change. Sound is
+not a cumulative experiment. The linked Python exercise lets readers change the relative sign and compare predictions. Sound is
 a designed representation of observations, not the physical sound of a state.
 
 ## Checks
